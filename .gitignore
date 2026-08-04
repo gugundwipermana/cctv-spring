@@ -1,0 +1,36 @@
+target/
+*.class
+.idea/
+*.iml
+storage/
+
+# ==================================================
+# Python (face-service)
+# ==================================================
+face-service/__pycache__/
+face-service/*.pyc
+face-service/.venv/
+face-service/venv/
+**/__pycache__/
+*.pyc
+
+# Model InsightFace yang otomatis di-download (jangan commit, besar & auto-fetch ulang)
+face-service/models/
+.insightface/
+
+# ==================================================
+# OS / Editor
+# ==================================================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ==================================================
+# Arduino / ESP32
+# ==================================================
+esp32_cam/build/
+*.hex
+*.bin

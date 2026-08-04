@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>CCTV - Daftar Rekaman</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 700px; margin: 40px auto; padding: 0 16px; background: #111; color: #eee; }
+        h1 { font-size: 1.4rem; }
+        ul { list-style: none; padding: 0; }
+        li { margin: 8px 0; }
+        a { color: #6cf; text-decoration: none; font-size: 1.1rem; }
+        a:hover { text-decoration: underline; }
+        .empty { color: #888; }
+    </style>
+</head>
+<body>
+<h1>Rekaman CCTV</h1>
+
+<ul th:if="${!dates.isEmpty()}">
+    <li th:each="d : ${dates}">
+        <a th:href="@{'/recordings/' + ${d}}" th:text="${d}">2026-07-18</a>
+    </li>
+</ul>
+
+<p class="empty" th:if="${dates.isEmpty()}">Belum ada rekaman.</p>
+</body>
+</html>

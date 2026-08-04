@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="'CCTV - ' + ${date}">CCTV</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 16px; background: #111; color: #eee; }
+        h1 { font-size: 1.4rem; }
+        a.back { color: #6cf; text-decoration: none; }
+        .row { border: 1px solid #333; border-radius: 8px; padding: 12px 16px; margin: 12px 0; }
+        .row h3 { margin: 0 0 6px 0; font-size: 1.05rem; }
+        .status { display: inline-block; font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; margin-left: 8px; }
+        .status.COMPILED { background: #1a5c1a; }
+        .status.RECORDING { background: #5c4a1a; }
+        .names { color: #9cf; font-size: 0.9rem; margin: 4px 0; }
+        video { width: 100%; max-width: 480px; border-radius: 6px; margin-top: 8px; }
+        .empty { color: #888; }
+
+        .summary { display: flex; gap: 12px; margin: 6px 0; font-size: 0.85rem; }
+        .badge { padding: 2px 10px; border-radius: 10px; }
+        .badge.known { background: #1a3a5c; color: #9cf; }
+        .badge.unknown { background: #5c1a1a; color: #f99; }
+
+        .unknown-faces { margin-top: 10px; }
+        .unknown-face-card {
+            display: inline-block; vertical-align: top; margin: 6px 8px 6px 0;
+            border: 1px solid #333; border-radius: 6px; padding: 8px; background: #1a1a1a;
+        }
+        .unknown-face-card .meta { font-size: 0.75rem; color: #aaa; margin-bottom: 6px; }
+        .unknown-face-card .thumbs { display: flex; gap: 4px; flex-wrap: wrap; max-width: 220px; }
+        .unknown-face-card img {
+            width: 48px; height: 48px; object-fit: cover; border-radius: 4px; border: 1px solid #444;
+        }
+    </style>
+</head>
+<body>
+<a class="back" href="/">&larr; Kembali</a>
+<h1 th:text="'Rekaman tanggal ' + ${date}">Rekaman</h1>
+
+<p class="empty" th:if="${rows.isEmpty()}">Tidak ada rekaman untuk tanggal ini.</p>
+
+<div class="row" th:each="row : ${rows}">
+    <h3>
+        <span th:text="${row.cameraId()}">cam1</span>
+        &middot;
+        <span th:text="${#numbers.formatInteger(row.hour(), 2)} + ':00'">11:00</span>
+        <span class="status" th:classappend="${row.status()}" th:text="${row.status()}">COMPILED</span>
+    </h3>
+
+    <div class="summary">
+        <span class="badge known" th:text="${row.knownFaceCount()} + ' dikenal'">2 dikenal</span>
+        <span class="badge unknown" th:text="${row.unknownFaceCount()} + ' tidak dikenal'">1 tidak dikenal</span>
+    </div>
+
+    <p class="names" th:if="${!row.namesDetected().isEmpty()}">
+        Terdeteksi: <span th:text="${#strings.listJoin(row.namesDetected(), ', ')}">Gugun</span>
+    </p>
+
+    <video th:if="${row.videoPath() != null}" controls
+           th:src="@{'/media/recordings/' + ${row.videoPath()}}">
+    </video>
+    <p th:if="${row.videoPath() == null}" class="empty">Masih berjalan / belum di-compile.</p>
+
+    <div class="unknown-faces" th:if="${!row.unknownFaces().isEmpty()}">
+        <div class="unknown-face-card" th:each="uf : ${row.unknownFaces()}">
+            <div class="meta">
+                Wajah #<span th:text="${uf.id()}">12</span>
+                &middot; muncul <span th:text="${uf.detectionCount()}">8</span>x
+                <br/>
+                <span th:text="${uf.firstSeen()} + ' - ' + ${uf.lastSeen()}">14:05 - 14:40</span>
+            </div>
+            <div class="thumbs">
+                <img th:each="path : ${uf.imagePaths()}"
+                     th:src="@{'/media/unknown_faces/' + ${path}}"
+                     alt="wajah tidak dikenal"/>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

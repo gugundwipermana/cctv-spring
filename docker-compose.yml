@@ -1,0 +1,65 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: cctv_spring_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cctv_spring_user
+      POSTGRES_PASSWORD: cctv_spring_pass
+      POSTGRES_DB: cctv_spring_db
+    volumes:
+      - pgdata_spring:/var/lib/postgresql/data
+    ports:
+      - "5433:5432" # beda port dari Postgres Laravel (5432) biar bisa jalan berdampingan
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cctv_spring_user -d cctv_spring_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Reuse folder face-service dari project cctv-laravel apa adanya (copy-paste
+  # foldernya ke sini) - service ini stateless, tidak peduli siapa yang manggil.
+  face-service:
+    build: ./face-service
+    container_name: cctv_spring_face_service
+    restart: unless-stopped
+    ports:
+      - "8501:8500" # beda port dari face-service Laravel (8500) biar bisa jalan berdampingan
+    volumes:
+      - insightface_models_spring:/root/.insightface
+
+  app:
+    build: .
+    container_name: cctv_spring_app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      face-service:
+        condition: service_started
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/cctv_spring_db
+      DB_USER: cctv_spring_user
+      DB_PASSWORD: cctv_spring_pass
+      FACE_SERVICE_URL: http://face-service:8500
+      FACE_MATCH_THRESHOLD: "0.45"
+      UNKNOWN_FACE_SIMILARITY_THRESHOLD: 0.4
+      UNKNOWN_FACE_MAX_IMAGES: 5
+      UNKNOWN_FACE_RETENTION_DAYS: 10
+      UNKNOWN_FACE_MIN_DETECTION_COUNT: 3
+      FRAME_OUTPUT_FPS: "10"
+      KEEP_FRAMES_AFTER_COMPILE: "false"
+      RETENTION_DAYS: "7"
+      CCTV_STORAGE_PATH: /data/storage
+    ports:
+      - "8090:8080" # beda port dari Laravel (8000) biar bisa jalan berdampingan
+    volumes:
+      # Path host diambil dari .env (STORAGE_HOST_PATH). Di PC ini default-nya
+      # folder lokal ./storage. Nanti pas pindah ke server, cukup ubah isi
+      # file .env jadi /mnt/storage/cctv-spring - TIDAK perlu ubah file
+      # docker-compose.yml ini sama sekali.
+      - ${STORAGE_HOST_PATH:-./storage}:/data/storage
+
+volumes:
+  pgdata_spring:
+  insightface_models_spring:
