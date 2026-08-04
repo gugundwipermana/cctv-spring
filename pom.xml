@@ -64,6 +64,12 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Authentication and Authorization -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

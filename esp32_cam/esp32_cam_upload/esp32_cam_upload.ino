@@ -25,6 +25,9 @@ const char *WIFI_PASSWORD = "WIFI_PASSWORD";
 // Endpoint sekarang mengarah ke Laravel API (/api/upload), bukan langsung ke Python
 const char *SERVER_URL = "http://192.168.1.3:8090/api/upload";
 
+// Ganti dengan API Key yang sama persis dengan CCTV_API_KEY di .env
+const char *API_KEY = "isi-sama-persis-dengan-CCTV_API_KEY-di-.env";
+
 // Interval pengambilan gambar (ms). 1000 = 1 gambar/detik.
 // Server akan menyimpan tiap frame ini dan menggabungkannya jadi 1 video per jam (24 video/hari).
 // PC Ryzen 5600 + RX6600 cukup kuat untuk 1 fps ini. Kalau mau hemat bandwidth/disk, bisa dinaikkan ke 2000-3000ms.
@@ -129,6 +132,8 @@ void captureAndUpload() {
   // Kirim sebagai multipart/form-data agar cocok dengan endpoint FastAPI (UploadFile)
   String boundary = "----ESP32CamBoundary";
   http.addHeader("Content-Type", "multipart/form-data; boundary=" + boundary);
+  // di dalam captureAndUpload(), setelah http.addHeader Content-Type:
+  http.addHeader("X-API-Key", API_KEY);
 
   String bodyStart = "--" + boundary + "\r\n";
   bodyStart += "Content-Disposition: form-data; name=\"camera_id\"\r\n\r\n";

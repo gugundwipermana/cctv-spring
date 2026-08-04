@@ -9,4 +9,6 @@ import java.util.List;
 public interface UnknownFaceRepository extends JpaRepository<UnknownFace, Long> {
 
     List<UnknownFace> findAllByLastSeenAtBeforeAndDetectionCountLessThan(LocalDateTime cutoff, int minDetectionCount);
+
+    List<UnknownFace> findAllByOrderByLastSeenAtDesc();
 }

@@ -51,6 +51,9 @@ services:
       KEEP_FRAMES_AFTER_COMPILE: "false"
       RETENTION_DAYS: "7"
       CCTV_STORAGE_PATH: /data/storage
+      CCTV_ADMIN_USERNAME: ${CCTV_ADMIN_USERNAME}
+      CCTV_ADMIN_PASSWORD: ${CCTV_ADMIN_PASSWORD}
+      CCTV_API_KEY: ${CCTV_API_KEY}
     ports:
       - "8090:8080" # beda port dari Laravel (8000) biar bisa jalan berdampingan
     volumes:

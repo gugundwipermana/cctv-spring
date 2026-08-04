@@ -16,6 +16,12 @@
 <body>
 <h1>Rekaman CCTV</h1>
 
+<form th:action="@{/logout}" method="post" style="display:inline;">
+    <button type="submit" style="background:none;border:1px solid #555;color:#ccc;padding:4px 10px;border-radius:4px;cursor:pointer;">Logout</button>
+</form>
+
+<a href="/unknown-faces">Kelola wajah tidak dikenal</a>
+
 <ul th:if="${!dates.isEmpty()}">
     <li th:each="d : ${dates}">
         <a th:href="@{'/recordings/' + ${d}}" th:text="${d}">2026-07-18</a>

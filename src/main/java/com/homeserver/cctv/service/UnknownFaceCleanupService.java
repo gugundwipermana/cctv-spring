@@ -26,6 +26,7 @@ public class UnknownFaceCleanupService {
     private final UnknownFaceRepository unknownFaceRepository;
     private final UnknownFaceImageRepository unknownFaceImageRepository;
     private final RecordingUnknownFaceRepository recordingUnknownFaceRepository;
+    private final UnknownFaceService unknownFaceService;
 
     @Value("${cctv.unknown-face.retention-days:10}")
     private int retentionDays;
@@ -54,28 +55,11 @@ public class UnknownFaceCleanupService {
             return;
         }
 
-        int deletedFaceCount = 0;
-        int deletedFileCount = 0;
-
         for (UnknownFace face : staleFaces) {
-            List<UnknownFaceImage> images = unknownFaceImageRepository
-                .findAllByUnknownFaceIdOrderByCapturedAtAsc(face.getId());
-
-            for (UnknownFaceImage image : images) {
-                if (deleteFile(image.getImagePath())) {
-                    deletedFileCount++;
-                }
-            }
-
-            // Hapus dulu semua link ke recording, sebelum hapus UnknownFace itu sendiri
-            // Ini mennggantikan kebutuhan ON DELETE CASCADE di level database;
-            recordingUnknownFaceRepository.deleteAllByUnknownFaceId(face.getId());
-
-            unknownFaceRepository.delete(face);
-            deletedFaceCount++;
+            unknownFaceService.deleteUnknownFace(face);
         }
 
-        log.info(">> LOG: Cleanup unknown face selesai: {} identitas dihapus, {} file gambar dihapus", deletedFaceCount, deletedFileCount);
+        log.info(">> LOG: Cleanup unknown face selesai: {} identitas dihapus", staleFaces.size());
     }
 
     private boolean deleteFile(String pathStr) {

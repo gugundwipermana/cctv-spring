@@ -7,6 +7,8 @@ import com.homeserver.cctv.entity.UnknownFaceImage;
 import com.homeserver.cctv.repository.RecordingUnknownFaceRepository;
 import com.homeserver.cctv.repository.UnknownFaceImageRepository;
 import com.homeserver.cctv.repository.UnknownFaceRepository;
+
+import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -191,5 +193,28 @@ public class UnknownFaceService {
         }
 
         recordingUnknownFaceRepository.save(link);
+    }
+
+    /**
+     * Hapus satu identitas unknown face secara lengkap: file gambar di disk,
+     * link ke recording, dan row UnknownFace itu sendiri (UnknownFaceImage
+     * ikut terhapus otomatis via cascade orphanRemoval).
+     */
+    @Transactional
+    public void deleteUnknownFace(UnknownFace face) {
+        List<UnknownFaceImage> images = unknownFaceImageRepository
+                .findAllByUnknownFaceIdOrderByCapturedAtAsc(face.getId());
+
+        for (UnknownFaceImage image : images) {
+            try {
+                Path path = Path.of(storageBasePath, "unknown_faces", image.getImagePath());
+                Files.deleteIfExists(path);
+            } catch (IOException e) {
+                log.warn("Gagal hapus file gambar unknown face id={}: {}", face.getId(), e.getMessage());
+            }
+        }
+
+        recordingUnknownFaceRepository.deleteAllByUnknownFaceId(face.getId());
+        unknownFaceRepository.delete(face); // cascade hapus UnknownFaceImage rows otomatis
     }
 }

@@ -31,11 +31,21 @@
         .unknown-face-card img {
             width: 48px; height: 48px; object-fit: cover; border-radius: 4px; border: 1px solid #444;
         }
+        .toggle-btn {
+            background: #333; color: #ddd; border: 1px solid #555; border-radius: 6px;
+            padding: 6px 12px; font-size: 0.85rem; cursor: pointer; margin-top: 6px;
+        }
+        .toggle-btn:hover { background: #444; }
+        .gallery-content { margin-top: 8px; }
     </style>
 </head>
 <body>
 <a class="back" href="/">&larr; Kembali</a>
 <h1 th:text="'Rekaman tanggal ' + ${date}">Rekaman</h1>
+
+<form th:action="@{/logout}" method="post" style="display:inline;">
+    <button type="submit" style="background:none;border:1px solid #555;color:#ccc;padding:4px 10px;border-radius:4px;cursor:pointer;">Logout</button>
+</form>
 
 <p class="empty" th:if="${rows.isEmpty()}">Tidak ada rekaman untuk tanggal ini.</p>
 
@@ -62,20 +72,36 @@
     <p th:if="${row.videoPath() == null}" class="empty">Masih berjalan / belum di-compile.</p>
 
     <div class="unknown-faces" th:if="${!row.unknownFaces().isEmpty()}">
-        <div class="unknown-face-card" th:each="uf : ${row.unknownFaces()}">
-            <div class="meta">
-                Wajah #<span th:text="${uf.id()}">12</span>
-                &middot; muncul <span th:text="${uf.detectionCount()}">8</span>x
-                <br/>
-                <span th:text="${uf.firstSeen()} + ' - ' + ${uf.lastSeen()}">14:05 - 14:40</span>
-            </div>
-            <div class="thumbs">
-                <img th:each="path : ${uf.imagePaths()}"
-                     th:src="@{'/media/unknown_faces/' + ${path}}"
-                     alt="wajah tidak dikenal"/>
+        <button type="button"
+                class="toggle-btn"
+                th:attr="data-target='gallery-' + ${row.cameraId()} + '-' + ${row.hour()}"
+                onclick="toggleGallery(this.dataset.target)">
+            Tampilkan <span th:text="${row.unknownFaceCount()}">1</span> wajah tidak dikenal
+        </button>
+
+        <div th:id="'gallery-' + ${row.cameraId()} + '-' + ${row.hour()}" class="gallery-content" style="display:none;">
+            <div class="unknown-face-card" th:each="uf : ${row.unknownFaces()}">
+                <div class="meta">
+                    Wajah #<span th:text="${uf.id()}">12</span>
+                    &middot; muncul <span th:text="${uf.detectionCount()}">8</span>x
+                    <br/>
+                    <span th:text="${uf.firstSeen()} + ' - ' + ${uf.lastSeen()}">14:05 - 14:40</span>
+                </div>
+                <div class="thumbs">
+                    <img th:each="path : ${uf.imagePaths()}"
+                        th:src="@{'/media/unknown_faces/' + ${path}}"
+                        alt="wajah tidak dikenal"/>
+                </div>
             </div>
         </div>
     </div>
 </div>
+<script>
+    function toggleGallery(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+</script>
 </body>
 </html>

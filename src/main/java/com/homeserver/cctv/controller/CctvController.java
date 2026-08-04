@@ -71,6 +71,9 @@ public class CctvController {
     @Value("${cctv.storage.path}")
     private String storagePath;
 
+    @Value("${cctv.face-quality.min-det-score:0.75}")
+    private double minDetScore;
+
     public CctvController(
             FaceServiceClient faceServiceClient,
             FaceMatchingService faceMatchingService,
@@ -105,8 +108,16 @@ public class CctvController {
             byte[] imageBytes = file.getBytes();
 
             FaceDetectionResponse detection = faceServiceClient.detectFaces(imageBytes, file.getOriginalFilename());
-            List<FaceDetectionResponse.DetectedFace> faces =
+            List<FaceDetectionResponse.DetectedFace> allFaces =
                     detection != null && detection.faces() != null ? detection.faces() : List.of();
+
+            // Buang wajah kualitas rendah (blur/gelap/sudut jelek) SEBELUM matching,
+            // supaya tidak jadi unknown face palsu maupun gagal match ke known face.
+            List<FaceDetectionResponse.DetectedFace> faces = allFaces.stream()
+                    .filter(f -> f.detScore() >= minDetScore)
+                    .collect(Collectors.toList());
+
+            // faces.forEach(f -> log.info("DEBUG det_score={} untuk camera={}", f.detScore(), cameraId));
 
             // Cocokkan tiap wajah yang terdeteksi terhadap known_faces
             List<Optional<FaceMatch>> matchResults = faces.stream()
