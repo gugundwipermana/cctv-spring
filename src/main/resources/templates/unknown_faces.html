@@ -20,26 +20,38 @@
 
     <p class="text-secondary" th:if="${rows.isEmpty()}">Belum ada wajah tidak dikenal yang tercatat.</p>
 
-    <div class="uf-card p-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-3"
-         th:each="row : ${rows}">
-        <div class="thumbs d-flex">
-            <img th:each="path : ${row.imagePaths()}"
-                 th:src="@{'/media/unknown_faces/' + ${path}}"
-                 alt="wajah tidak dikenal"/>
+    <div class="uf-card p-3 mb-3" th:each="row : ${rows}">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-2">
+            <div class="thumbs d-flex">
+                <img th:each="path : ${row.imagePaths()}"
+                    th:src="@{'/media/unknown_faces/' + ${path}}" alt="wajah tidak dikenal"/>
+            </div>
+            <div class="flex-grow-1 small text-secondary">
+                Wajah #<span th:text="${row.id}">12</span> &middot;
+                muncul <span th:text="${row.detectionCount()}">8</span>x
+            </div>
         </div>
 
-        <div class="flex-grow-1 small text-secondary">
-            Wajah #<span th:text="${row.id()}">12</span> &middot;
-            muncul <span th:text="${row.detectionCount()}">8</span>x
-            <br/>
-            <span th:text="${row.firstSeen()}">2026-08-04T02:05</span> &rarr;
-            <span th:text="${row.lastSeen()}">2026-08-04T02:40</span>
-        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <form th:action="@{'/unknown-faces/' + ${row.id} + '/register-new'}" method="post" class="d-flex gap-1">
+                <input type="text" name="name" class="form-control form-control-sm bg-dark text-light border-secondary"
+                    placeholder="Nama baru" style="width:140px;" required/>
+                <button type="submit" class="btn btn-outline-success btn-sm">Daftarkan</button>
+            </form>
 
-        <form th:action="@{'/unknown-faces/' + ${row.id()} + '/delete'}" method="post"
-              onsubmit="return confirm('Hapus wajah ini beserta semua gambarnya? Tindakan ini tidak bisa dibatalkan.');">
-            <button type="submit" class="btn btn-outline-danger btn-sm">Hapus</button>
-        </form>
+            <form th:action="@{'/unknown-faces/' + ${row.id} + '/assign'}" method="post" class="d-flex gap-1">
+                <select name="knownFaceId" class="form-select form-select-sm bg-dark text-light border-secondary" style="width:160px;" required>
+                    <option value="" disabled selected>Pilih orang</option>
+                    <option th:each="k : ${knownFaces}" th:value="${k.id}" th:text="${k.name}">Nama</option>
+                </select>
+                <button type="submit" class="btn btn-outline-primary btn-sm">Masukkan</button>
+            </form>
+
+            <form th:action="@{'/unknown-faces/' + ${row.id} + '/delete'}" method="post"
+                onsubmit="return confirm('Hapus wajah ini beserta semua gambarnya?');">
+                <button type="submit" class="btn btn-outline-danger btn-sm">Hapus</button>
+            </form>
+        </div>
     </div>
 </div>
 

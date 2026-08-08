@@ -24,7 +24,7 @@ public class AdminSeederConfig {
                 System.out.println("Admin user already exists.");
                 return;
             }
-            if(adminPassword == null || adminPassword.isEmpty() || adminPassword.isBlank()) {
+            if (adminPassword == null || adminPassword.isEmpty() || adminPassword.isBlank()) {
                 System.out.println("Admin password is not set. Skipping admin user creation.");
                 throw new IllegalStateException("Admin password is not set. Please set the 'cctv.admin.password' property.");
             }

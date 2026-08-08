@@ -14,6 +14,7 @@ import com.homeserver.cctv.service.FaceMatchingService;
 import com.homeserver.cctv.service.FaceServiceClient;
 import com.homeserver.cctv.service.FrameStorageService;
 import com.homeserver.cctv.service.ImageAnnotationService;
+import com.homeserver.cctv.service.KnownFaceService;
 import com.homeserver.cctv.service.RecordingService;
 import com.homeserver.cctv.service.UnknownFaceService;
 
@@ -62,6 +63,7 @@ public class CctvController {
     private final ImageAnnotationService imageAnnotationService;
     private final FrameStorageService frameStorageService;
     private final RecordingService recordingService;
+    private final KnownFaceService knownFaceService;
     private final UnknownFaceService unknownFaceService;
     private final KnownFaceRepository knownFaceRepository;
     private final FaceEmbeddingRepository faceEmbeddingRepository;
@@ -80,6 +82,7 @@ public class CctvController {
             ImageAnnotationService imageAnnotationService,
             FrameStorageService frameStorageService,
             RecordingService recordingService,
+            KnownFaceService knownFaceService,
             UnknownFaceService unknownFaceService,
             KnownFaceRepository knownFaceRepository,
             FaceEmbeddingRepository faceEmbeddingRepository,
@@ -91,6 +94,7 @@ public class CctvController {
         this.imageAnnotationService = imageAnnotationService;
         this.frameStorageService = frameStorageService;
         this.recordingService = recordingService;
+        this.knownFaceService = knownFaceService;
         this.unknownFaceService = unknownFaceService;
         this.knownFaceRepository = knownFaceRepository;
         this.faceEmbeddingRepository = faceEmbeddingRepository;
@@ -191,38 +195,14 @@ public class CctvController {
             return ResponseEntity.badRequest().body(Map.of("error", "Minimal 1 foto wajib diupload"));
         }
 
-        KnownFace knownFace = knownFaceRepository.findByNameIgnoreCase(name)
-                .orElseGet(() -> {
-                    KnownFace kf = new KnownFace();
-                    kf.setName(name);
-                    return knownFaceRepository.save(kf);
-                });
+        KnownFace knownFace = knownFaceService.getOrCreate(name);
 
         List<Map<String, Object>> details = new ArrayList<>();
         int successCount = 0;
 
         for (MultipartFile file : files) {
             try {
-                byte[] imageBytes = file.getBytes();
-                FaceDetectionResponse detection = faceServiceClient.detectFaces(imageBytes, file.getOriginalFilename());
-
-                if (detection == null || detection.faces() == null || detection.faces().isEmpty()) {
-                    details.add(Map.of("file", file.getOriginalFilename(), "status", "gagal", "error", "Tidak ada wajah terdeteksi"));
-                    continue;
-                }
-                if (detection.faces().size() > 1) {
-                    details.add(Map.of("file", file.getOriginalFilename(), "status", "gagal", "error", "Lebih dari 1 wajah terdeteksi di foto ini"));
-                    continue;
-                }
-
-                List<Double> embedding = detection.faces().get(0).embedding();
-                log.info(">> LOG: DEBUG embedding size={}, isi={}", embedding.size(), embedding);
-
-                FaceEmbedding faceEmbedding = new FaceEmbedding();
-                faceEmbedding.setKnownFace(knownFace);
-                faceEmbedding.setEmbeddingJson(faceMatchingService.toEmbeddingJson(embedding));
-                faceEmbeddingRepository.save(faceEmbedding);
-
+                knownFaceService.addPhoto(knownFace, file.getBytes(), file.getOriginalFilename());
                 details.add(Map.of("file", file.getOriginalFilename(), "status", "sukses"));
                 successCount++;
             } catch (IOException e) {

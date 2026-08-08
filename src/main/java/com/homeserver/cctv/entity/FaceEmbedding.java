@@ -30,6 +30,9 @@ public class FaceEmbedding {
     @Column(name = "embedding_json", nullable = false, columnDefinition = "TEXT")
     private String embeddingJson;
 
+    @Column(name = "image_path")
+    private String imagePath;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

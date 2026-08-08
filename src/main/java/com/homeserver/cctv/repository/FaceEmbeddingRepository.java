@@ -13,6 +13,6 @@ public interface FaceEmbeddingRepository extends JpaRepository<FaceEmbedding, Lo
     // - tidak query berulang ke DB satu-satu per embedding (N+1 problem).
     @Query("SELECT fe FROM FaceEmbedding fe JOIN FETCH fe.knownFace")
     List<FaceEmbedding> findAllWithKnownFace();
-
     List<FaceEmbedding> findByKnownFaceId(Long knownFaceId);
+    List<FaceEmbedding> findByKnownFaceIdOrderByCreatedAtDesc(Long knownFaceId);
 }

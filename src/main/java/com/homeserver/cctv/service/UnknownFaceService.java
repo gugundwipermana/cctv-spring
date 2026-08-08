@@ -1,9 +1,13 @@
 package com.homeserver.cctv.service;
 
+import com.homeserver.cctv.dto.FaceDetectionResponse;
+import com.homeserver.cctv.entity.FaceEmbedding;
+import com.homeserver.cctv.entity.KnownFace;
 import com.homeserver.cctv.entity.Recording;
 import com.homeserver.cctv.entity.RecordingUnknownFace;
 import com.homeserver.cctv.entity.UnknownFace;
 import com.homeserver.cctv.entity.UnknownFaceImage;
+import com.homeserver.cctv.repository.FaceEmbeddingRepository;
 import com.homeserver.cctv.repository.RecordingUnknownFaceRepository;
 import com.homeserver.cctv.repository.UnknownFaceImageRepository;
 import com.homeserver.cctv.repository.UnknownFaceRepository;
@@ -29,6 +33,9 @@ public class UnknownFaceService {
     private final UnknownFaceRepository unknownFaceRepository;
     private final UnknownFaceImageRepository unknownFaceImageRepository;
     private final RecordingUnknownFaceRepository recordingUnknownFaceRepository;
+    private final FaceServiceClient faceServiceClient;
+    private final FaceEmbeddingRepository faceEmbeddingRepository;
+    private final FaceMatchingService faceMatchingService;
     private final ObjectMapper objectMapper;
 
     @Value("${cctv.unknown-face.similarity-threshold:0.4}")
@@ -44,11 +51,17 @@ public class UnknownFaceService {
         UnknownFaceRepository unknownFaceRepository,
         UnknownFaceImageRepository unknownFaceImageRepository,
         RecordingUnknownFaceRepository recordingUnknownFaceRepository,
+        FaceServiceClient faceServiceClient,
+        FaceEmbeddingRepository faceEmbeddingRepository,
+        FaceMatchingService faceMatchingService,
         ObjectMapper objectMapper
     ) {
         this.unknownFaceRepository = unknownFaceRepository;
         this.unknownFaceImageRepository = unknownFaceImageRepository;
         this.recordingUnknownFaceRepository = recordingUnknownFaceRepository;
+        this.faceServiceClient = faceServiceClient;
+        this.faceEmbeddingRepository = faceEmbeddingRepository;
+        this.faceMatchingService = faceMatchingService;
         this.objectMapper = objectMapper;
     }
 
@@ -100,7 +113,7 @@ public class UnknownFaceService {
             if (candidate.getEmbeddingJson() == null) continue;
             List<Double> candidateEmbedding = fromJson(candidate.getEmbeddingJson());
             double similarity = cosineSimilarity(embedding, candidateEmbedding);
-            if(similarity >= similarityThreshold && similarity > bestSimilarity) {
+            if (similarity >= similarityThreshold && similarity > bestSimilarity) {
                 best = candidate;
                 bestSimilarity = similarity;
             }
@@ -139,7 +152,7 @@ public class UnknownFaceService {
 
     private void saveImageIfUnderLimit(UnknownFace unknownFace, byte[] imageByte, LocalDateTime capturedAt) {
         long currentCount = unknownFaceImageRepository.countByUnknownFaceId(unknownFace.getId());
-        if(currentCount >= maxImagesPerFace) {
+        if (currentCount >= maxImagesPerFace) {
             return; // max 5 images, skip
         }
 
@@ -216,5 +229,50 @@ public class UnknownFaceService {
 
         recordingUnknownFaceRepository.deleteAllByUnknownFaceId(face.getId());
         unknownFaceRepository.delete(face); // cascade hapus UnknownFaceImage rows otomatis
+    }
+
+    /**
+     * Pindahkan unknown face menjadi known face: buat KnownFace baru, copy embedding, copy representative image (jika ada), hapus unknown face.
+     */
+    @Transactional
+    public void promoteToKnownFace(UnknownFace unknownFace, KnownFace targetKnownFace) {
+        List<UnknownFaceImage> images = unknownFaceImageRepository
+                .findAllByUnknownFaceIdOrderByCapturedAtAsc(unknownFace.getId());
+            
+        for (UnknownFaceImage image : images) {
+            try {
+                Path oldPath = Path.of(storageBasePath, "unknown_faces", image.getImagePath());
+                if (!Files.exists(oldPath)) {
+                    log.warn("File gambar unknown face id={} tidak ditemukan di disk: {}", unknownFace.getId(), oldPath);
+                    continue;
+                }
+
+                byte[] imageBytes = Files.readAllBytes(oldPath);
+                FaceDetectionResponse detection = faceServiceClient.detectFaces(imageBytes, "promoted.jpg");
+                if (detection == null || detection.faces() == null || detection.faces().isEmpty()) {
+                    log.warn("Tidak ada wajah terdeteksi saat promote unknown face id={} ke known face", unknownFace.getId());
+                    continue;
+                }
+
+                List<Double> embedding = detection.faces().get(0).embedding();
+
+                Path newDir = Path.of(storageBasePath, "known_faces", String.valueOf(targetKnownFace.getId()));
+                Files.createDirectories(newDir);
+                String fileName = "promoted_" + System.nanoTime() + ".jpg";
+                Path newPath = newDir.resolve(fileName);
+                Files.move(oldPath, newPath);
+                
+                FaceEmbedding faceEmbedding = new FaceEmbedding();
+                faceEmbedding.setKnownFace(targetKnownFace);
+                faceEmbedding.setEmbeddingJson(faceMatchingService.toEmbeddingJson(embedding));
+                faceEmbedding.setImagePath(Path.of(String.valueOf(targetKnownFace.getId()), fileName).toString());
+                faceEmbeddingRepository.save(faceEmbedding);
+            } catch (IOException e) {
+                log.warn("Gagal promote file gambar unknown face id={} ke known face: {}", unknownFace.getId(), e.getMessage());
+            }
+        }
+
+        // 4. Delete UnknownFace
+        deleteUnknownFace(unknownFace);
     }
 }

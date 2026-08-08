@@ -23,5 +23,8 @@ public class WebConfig implements WebMvcConfigurer {
 
         registry.addResourceHandler("/media/unknown_faces/**")
                 .addResourceLocations("file:" + storagePath + "/unknown_faces/");
+
+        registry.addResourceHandler("/media/known_faces/**")
+                .addResourceLocations("file:" + storagePath + "/known_faces/");
     }
 }
